@@ -1,5 +1,5 @@
 #include "ofApp.h"
-
+#include <cstdio>
 
 //--------------------------------------------------------------
 void ofApp::setup() {
@@ -86,11 +86,22 @@ void ofApp::update() {
 		
 		// find contours which are between the size of 20 pixels and 1/3 the w*h pixels.
 		// also, find holes is set to true so we will get interior contours as well....
-		contourFinder.findContours(grayImage, 10, (kinect.width*kinect.height)/2, 20, false);
+		contourFinder.findContours(grayImage, 50, (kinect.width*kinect.height)/2, 1, false);
+
+		// for (int i = 0; i < contourFinder.nBlobs; i++) {
+		// 	ofxCvBlob blob = contourFinder.blobs.at(i);
+		// 	// do something fun with blob
+		// }
 	}
 }
 
 //--------------------------------------------------------------
+void drawPoint(int x, int y, float dist) {
+	char buff[100];
+	sprintf(buff, "%0.2f", dist);
+	ofDrawBitmapString(buff, x, y);
+}
+
 void ofApp::draw() {
 	
 	ofSetColor(255, 255, 255);
@@ -100,13 +111,25 @@ void ofApp::draw() {
 		drawPointCloud();
 		easyCam.end();
 	} else {
-		// draw from the live kinect
-		kinect.drawDepth(10, 10, 400, 300);
-		kinect.draw(420, 10, 400, 300);
-		
-		//grayImage.draw(10, 320, 400, 300);
-		contourFinder.draw(10, 320, 400, 300);
+		kinect.drawDepth(10, 10, kinect.width / 2, kinect.height / 2);
+		contourFinder.draw(10, 10, kinect.width / 2, kinect.height / 2);
 
+		int pixw = grayImage.width;
+		unsigned char* pix = grayImage.getPixels();
+
+		ofSetColor(255, 0, 0);
+		for (int i = 0; i < contourFinder.nBlobs; i++) {
+			ofxCvBlob blob = contourFinder.blobs.at(i);
+
+			ofPoint centroid = blob.centroid;
+
+		 	int x = 10 + (centroid.x / 2);
+		 	int y = 10 + (centroid.y / 2);
+
+			ofCircle(x, y, 5);
+
+			drawPoint(x, y, kinect.getDistanceAt(centroid.x, centroid.y));
+		}
 		
 	}
 	
