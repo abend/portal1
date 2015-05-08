@@ -19,9 +19,6 @@
 //
 // No way around the Windows driver dance, sorry.
 
-// uncomment this to read from two kinects simultaneously
-//#define USE_TWO_KINECTS
-
 class ofApp : public ofBaseApp {
 public:
 	
@@ -39,10 +36,6 @@ public:
 	void windowResized(int w, int h);
 	
 	ofxKinect kinect;
-	
-#ifdef USE_TWO_KINECTS
-	ofxKinect kinect2;
-#endif
 	
 	ofxCvColorImage colorImg;
 	

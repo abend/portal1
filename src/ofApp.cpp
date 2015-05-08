@@ -3,14 +3,14 @@
 
 //--------------------------------------------------------------
 void ofApp::setup() {
-	ofSetLogLevel(OF_LOG_VERBOSE);
+	//ofSetLogLevel(OF_LOG_VERBOSE);
 	
 	// enable depth->video image calibration
-	kinect.setRegistration(true);
+	//kinect.setRegistration(true);
     
-	kinect.init();
+	//kinect.init();
 	//kinect.init(true); // shows infrared instead of RGB video image
-	//kinect.init(false, false); // disable video image (faster fps)
+	kinect.init(false, false); // disable video image (faster fps)
 	
 	kinect.open();		// opens first available kinect
 	//kinect.open(1);	// open a kinect by id, starting with 0 (sorted by serial # lexicographically))
@@ -24,25 +24,22 @@ void ofApp::setup() {
 		ofLogNotice() << "zero plane dist: " << kinect.getZeroPlaneDistance() << "mm";
 	}
 	
-#ifdef USE_TWO_KINECTS
-	kinect2.init();
-	kinect2.open();
-#endif
-	
 	colorImg.allocate(kinect.width, kinect.height);
 	grayImage.allocate(kinect.width, kinect.height);
 	grayThreshNear.allocate(kinect.width, kinect.height);
 	grayThreshFar.allocate(kinect.width, kinect.height);
 	
-	nearThreshold = 230;
-	farThreshold = 70;
+	nearThreshold = 255;
+	farThreshold = 132;
+	// nearThreshold = 230;
+	// farThreshold = 70;
 	bThreshWithOpenCV = true;
 	
 	ofSetFrameRate(60);
 	
 	// zero the tilt on startup
-	angle = 0;
-	kinect.setCameraTiltAngle(angle);
+	// angle = 0;
+	// kinect.setCameraTiltAngle(angle);
 	
 	// start from the front
 	bDrawPointCloud = false;
@@ -91,10 +88,6 @@ void ofApp::update() {
 		// also, find holes is set to true so we will get interior contours as well....
 		contourFinder.findContours(grayImage, 10, (kinect.width*kinect.height)/2, 20, false);
 	}
-	
-#ifdef USE_TWO_KINECTS
-	kinect2.update();
-#endif
 }
 
 //--------------------------------------------------------------
@@ -111,12 +104,10 @@ void ofApp::draw() {
 		kinect.drawDepth(10, 10, 400, 300);
 		kinect.draw(420, 10, 400, 300);
 		
-		grayImage.draw(10, 320, 400, 300);
+		//grayImage.draw(10, 320, 400, 300);
 		contourFinder.draw(10, 320, 400, 300);
+
 		
-#ifdef USE_TWO_KINECTS
-		kinect2.draw(420, 320, 400, 300);
-#endif
 	}
 	
 	// draw instructions
@@ -125,27 +116,26 @@ void ofApp::draw() {
         
     if(kinect.hasAccelControl()) {
         reportStream << "accel is: " << ofToString(kinect.getMksAccel().x, 2) << " / "
-        << ofToString(kinect.getMksAccel().y, 2) << " / "
-        << ofToString(kinect.getMksAccel().z, 2) << endl;
+					 << ofToString(kinect.getMksAccel().y, 2) << " / "
+					 << ofToString(kinect.getMksAccel().z, 2) << endl;
     } else {
         reportStream << "Note: this is a newer Xbox Kinect or Kinect For Windows device," << endl
-		<< "motor / led / accel controls are not currently supported" << endl << endl;
+					 << "motor / led / accel controls are not currently supported" << endl << endl;
     }
     
 	reportStream << "press p to switch between images and point cloud, rotate the point cloud with the mouse" << endl
-	<< "using opencv threshold = " << bThreshWithOpenCV <<" (press spacebar)" << endl
-	<< "set near threshold " << nearThreshold << " (press: + -)" << endl
-	<< "set far threshold " << farThreshold << " (press: < >) num blobs found " << contourFinder.nBlobs
-	<< ", fps: " << ofGetFrameRate() << endl
-	<< "press c to close the connection and o to open it again, connection is: " << kinect.isConnected() << endl;
+				 << "using opencv threshold = " << bThreshWithOpenCV <<" (press spacebar)" << endl
+				 << "set near threshold " << nearThreshold << " (press: + -)" << endl
+				 << "set far threshold " << farThreshold << " (press: < >) num blobs found " << contourFinder.nBlobs
+				 << ", fps: " << ofGetFrameRate() << endl
+				 << "press c to close the connection and o to open it again, connection is: " << kinect.isConnected() << endl;
 
     if(kinect.hasCamTiltControl()) {
     	reportStream << "press UP and DOWN to change the tilt angle: " << angle << " degrees" << endl
-        << "press 1-5 & 0 to change the led mode" << endl;
+					 << "press 1-5 & 0 to change the led mode" << endl;
     }
     
 	ofDrawBitmapString(reportStream.str(), 20, 652);
-    
 }
 
 void ofApp::drawPointCloud() {
@@ -175,97 +165,93 @@ void ofApp::drawPointCloud() {
 
 //--------------------------------------------------------------
 void ofApp::exit() {
-	kinect.setCameraTiltAngle(0); // zero the tilt on exit
+	// kinect.setCameraTiltAngle(0); // zero the tilt on exit
 	kinect.close();
-	
-#ifdef USE_TWO_KINECTS
-	kinect2.close();
-#endif
 }
 
 //--------------------------------------------------------------
 void ofApp::keyPressed (int key) {
 	switch (key) {
-		case ' ':
-			bThreshWithOpenCV = !bThreshWithOpenCV;
-			break;
+	case ' ':
+		bThreshWithOpenCV = !bThreshWithOpenCV;
+		break;
 			
-		case'p':
-			bDrawPointCloud = !bDrawPointCloud;
-			break;
+	case'p':
+		bDrawPointCloud = !bDrawPointCloud;
+		break;
 			
-		case '>':
-		case '.':
-			farThreshold ++;
-			if (farThreshold > 255) farThreshold = 255;
-			break;
+	case '>':
+	case '.':
+		farThreshold ++;
+		if (farThreshold > 255) farThreshold = 255;
+		break;
 			
-		case '<':
-		case ',':
-			farThreshold --;
-			if (farThreshold < 0) farThreshold = 0;
-			break;
+	case '<':
+	case ',':
+		farThreshold --;
+		if (farThreshold < 0) farThreshold = 0;
+		break;
 			
-		case '+':
-		case '=':
-			nearThreshold ++;
-			if (nearThreshold > 255) nearThreshold = 255;
-			break;
+	case '+':
+	case '=':
+		nearThreshold ++;
+		if (nearThreshold > 255) nearThreshold = 255;
+		break;
 			
-		case '-':
-			nearThreshold --;
-			if (nearThreshold < 0) nearThreshold = 0;
-			break;
+	case '-':
+		nearThreshold --;
+		if (nearThreshold < 0) nearThreshold = 0;
+		break;
 			
-		case 'w':
-			kinect.enableDepthNearValueWhite(!kinect.isDepthNearValueWhite());
-			break;
+	case 'w':
+		kinect.enableDepthNearValueWhite(!kinect.isDepthNearValueWhite());
+		break;
 			
-		case 'o':
-			kinect.setCameraTiltAngle(angle); // go back to prev tilt
-			kinect.open();
-			break;
+	case 'o':
+		kinect.setCameraTiltAngle(angle); // go back to prev tilt
+		kinect.open();
+		break;
 			
-		case 'c':
-			kinect.setCameraTiltAngle(0); // zero the tilt
-			kinect.close();
-			break;
+	case 'c':
+		kinect.setCameraTiltAngle(0); // zero the tilt
+		kinect.close();
+		break;
 			
-		case '1':
-			kinect.setLed(ofxKinect::LED_GREEN);
-			break;
+	case '1':
+		kinect.setLed(ofxKinect::LED_GREEN);
+		break;
 			
-		case '2':
-			kinect.setLed(ofxKinect::LED_YELLOW);
-			break;
+	case '2':
+		kinect.setLed(ofxKinect::LED_YELLOW);
+		break;
 			
-		case '3':
-			kinect.setLed(ofxKinect::LED_RED);
-			break;
+	case '3':
+		kinect.setLed(ofxKinect::LED_RED);
+		break;
 			
-		case '4':
-			kinect.setLed(ofxKinect::LED_BLINK_GREEN);
-			break;
+	case '4':
+		kinect.setLed(ofxKinect::LED_BLINK_GREEN);
+		break;
 			
-		case '5':
-			kinect.setLed(ofxKinect::LED_BLINK_YELLOW_RED);
-			break;
+	case '5':
+		kinect.setLed(ofxKinect::LED_BLINK_YELLOW_RED);
+		break;
 			
-		case '0':
-			kinect.setLed(ofxKinect::LED_OFF);
-			break;
+	case '0':
+		kinect.setLed(ofxKinect::LED_OFF);
+		break;
 			
-		case OF_KEY_UP:
-			angle++;
-			if(angle>30) angle=30;
-			kinect.setCameraTiltAngle(angle);
-			break;
+	case OF_KEY_UP:
+		angle++;
+		if(angle>30) angle=30;
+		kinect.setCameraTiltAngle(angle);
+		break;
 			
-		case OF_KEY_DOWN:
-			angle--;
-			if(angle<-30) angle=-30;
-			kinect.setCameraTiltAngle(angle);
-			break;
+	case OF_KEY_DOWN:
+		angle--;
+		if(angle<-30) angle=-30;
+		kinect.setCameraTiltAngle(angle);
+		break;
 	}
 }
 
