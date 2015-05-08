@@ -43,6 +43,9 @@ void ofApp::setup() {
 	
 	// start from the front
 	bDrawPointCloud = false;
+	bDrawDepth = true;
+	bDrawContour = true;
+	bDrawHelp = false;
 }
 
 //--------------------------------------------------------------
@@ -111,54 +114,60 @@ void ofApp::draw() {
 		drawPointCloud();
 		easyCam.end();
 	} else {
-		kinect.drawDepth(10, 10, kinect.width / 2, kinect.height / 2);
-		contourFinder.draw(10, 10, kinect.width / 2, kinect.height / 2);
-
-		int pixw = grayImage.width;
-		unsigned char* pix = grayImage.getPixels();
-
-		ofSetColor(255, 0, 0);
-		for (int i = 0; i < contourFinder.nBlobs; i++) {
-			ofxCvBlob blob = contourFinder.blobs.at(i);
-
-			ofPoint centroid = blob.centroid;
-
-		 	int x = 10 + (centroid.x / 2);
-		 	int y = 10 + (centroid.y / 2);
-
-			ofCircle(x, y, 5);
-
-			drawPoint(x, y, kinect.getDistanceAt(centroid.x, centroid.y));
+		if (bDrawDepth) {
+			kinect.drawDepth(10, 10, kinect.width / 2, kinect.height / 2);
 		}
-		
-	}
-	
-	// draw instructions
-	ofSetColor(255, 255, 255);
-	stringstream reportStream;
-        
-    if(kinect.hasAccelControl()) {
-        reportStream << "accel is: " << ofToString(kinect.getMksAccel().x, 2) << " / "
-					 << ofToString(kinect.getMksAccel().y, 2) << " / "
-					 << ofToString(kinect.getMksAccel().z, 2) << endl;
-    } else {
-        reportStream << "Note: this is a newer Xbox Kinect or Kinect For Windows device," << endl
-					 << "motor / led / accel controls are not currently supported" << endl << endl;
-    }
-    
-	reportStream << "press p to switch between images and point cloud, rotate the point cloud with the mouse" << endl
-				 << "using opencv threshold = " << bThreshWithOpenCV <<" (press spacebar)" << endl
-				 << "set near threshold " << nearThreshold << " (press: + -)" << endl
-				 << "set far threshold " << farThreshold << " (press: < >) num blobs found " << contourFinder.nBlobs
-				 << ", fps: " << ofGetFrameRate() << endl
-				 << "press c to close the connection and o to open it again, connection is: " << kinect.isConnected() << endl;
 
-    if(kinect.hasCamTiltControl()) {
-    	reportStream << "press UP and DOWN to change the tilt angle: " << angle << " degrees" << endl
-					 << "press 1-5 & 0 to change the led mode" << endl;
-    }
+		if (bDrawContour) {
+			contourFinder.draw(10, 10, kinect.width / 2, kinect.height / 2);
+
+			int pixw = grayImage.width;
+			unsigned char* pix = grayImage.getPixels();
+
+			ofSetColor(255, 0, 0);
+			for (int i = 0; i < contourFinder.nBlobs; i++) {
+				ofxCvBlob blob = contourFinder.blobs.at(i);
+
+				ofPoint centroid = blob.centroid;
+
+				int x = 10 + (centroid.x / 2);
+				int y = 10 + (centroid.y / 2);
+
+				ofCircle(x, y, 5);
+
+				drawPoint(x, y, kinect.getDistanceAt(centroid.x, centroid.y));
+			}
+		}
+	}
+
+	if (bDrawHelp) {
+		// draw instructions
+		ofSetColor(255, 255, 255);
+		stringstream reportStream;
+        
+		// if (kinect.hasAccelControl()) {
+		// 	reportStream << "accel is: " << ofToString(kinect.getMksAccel().x, 2) << " / "
+		// 				 << ofToString(kinect.getMksAccel().y, 2) << " / "
+		// 				 << ofToString(kinect.getMksAccel().z, 2) << endl;
+		// } else {
+		// 	reportStream << "Note: this is a newer Xbox Kinect or Kinect For Windows device," << endl
+		// 				 << "motor / led / accel controls are not currently supported" << endl << endl;
+		// }
     
-	ofDrawBitmapString(reportStream.str(), 20, 652);
+		reportStream << "press p to switch between images and point cloud" << endl
+					 << "using opencv threshold = " << bThreshWithOpenCV <<" (press spacebar)" << endl
+					 << "set near threshold " << nearThreshold << " (press: + -)" << endl
+					 << "set far threshold " << farThreshold << " (press: < >) num blobs found " << contourFinder.nBlobs
+					 << ", fps: " << ofGetFrameRate() << endl
+					 << "h: toggle help, c: toggle contour, d: toggle depth" << endl;
+
+		if(kinect.hasCamTiltControl()) {
+			reportStream << "press UP and DOWN to change the tilt angle: " << angle << " degrees" << endl
+						 << "press 1-5 & 0 to change the led mode" << endl;
+		}
+    
+		ofDrawBitmapString(reportStream.str(), 20, 652);
+	}
 }
 
 void ofApp::drawPointCloud() {
@@ -199,8 +208,20 @@ void ofApp::keyPressed (int key) {
 		bThreshWithOpenCV = !bThreshWithOpenCV;
 		break;
 			
-	case'p':
+	case 'p':
 		bDrawPointCloud = !bDrawPointCloud;
+		break;
+
+	case 'h':
+		bDrawHelp = !bDrawHelp;
+		break;
+
+	case 'd':
+		bDrawDepth = !bDrawDepth;
+		break;
+
+	case 'c':
+		bDrawContour = !bDrawContour;
 		break;
 			
 	case '>':
@@ -235,10 +256,10 @@ void ofApp::keyPressed (int key) {
 		kinect.open();
 		break;
 			
-	case 'c':
-		kinect.setCameraTiltAngle(0); // zero the tilt
-		kinect.close();
-		break;
+	// case 'c':
+	// 	kinect.setCameraTiltAngle(0); // zero the tilt
+	// 	kinect.close();
+	// 	break;
 			
 	case '1':
 		kinect.setLed(ofxKinect::LED_GREEN);

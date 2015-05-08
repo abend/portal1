@@ -47,6 +47,9 @@ public:
 	
 	bool bThreshWithOpenCV;
 	bool bDrawPointCloud;
+	bool bDrawDepth;
+	bool bDrawContour;
+	bool bDrawHelp;
 	
 	int nearThreshold;
 	int farThreshold;
