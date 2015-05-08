@@ -20,7 +20,7 @@
 // No way around the Windows driver dance, sorry.
 
 class ofApp : public ofBaseApp {
-public:
+	public:
 	
 	void setup();
 	void update();
@@ -57,5 +57,11 @@ public:
 	int angle;
 	
 	// used for viewing the point cloud
-	ofEasyCam easyCam;
+	// ofEasyCam easyCam;
+	ofEasyCam camera;
+
+	//the view window is defined by 3 corners
+	ofVec3f windowTopLeft;
+	ofVec3f windowBottomLeft;
+	ofVec3f windowBottomRight;
 };

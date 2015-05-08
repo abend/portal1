@@ -1,0 +1,5 @@
+
+* <2015-05-08 Fri 15:35>
+  use Haar finder for face location from video, the get depth at that
+  point.  see cameraLensOffsetExample.
+
