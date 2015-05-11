@@ -3,6 +3,7 @@
 #include "ofMain.h"
 #include "ofxOpenCv.h"
 #include "ofxKinect.h"
+#include "ofxCvHaarFinder.h"
 
 // Windows users:
 // You MUST install the libfreenect kinect drivers in order to be able to use
@@ -44,8 +45,8 @@ class ofApp : public ofBaseApp {
 	ofxCvGrayscaleImage grayThreshFar; // the far thresholded image
 	
 	ofxCvContourFinder contourFinder;
+	ofxCvHaarFinder haarFinder;
 	
-	bool bThreshWithOpenCV;
 	bool bDrawPointCloud;
 	bool bDrawDepth;
 	bool bDrawContour;
@@ -66,4 +67,7 @@ class ofApp : public ofBaseApp {
 	ofVec3f windowBottomRight;
 
 	ofVec3f headPosition;
+
+	float windowWidth;
+	float windowHeight;
 };

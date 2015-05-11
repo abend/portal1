@@ -9,23 +9,21 @@ void ofApp::setup() {
 	//ofSetLogLevel(OF_LOG_VERBOSE);
 
 	// enable depth->video image calibration
-	//kinect.setRegistration(true);
+	kinect.setRegistration(true);
 
-	//kinect.init();
+	kinect.init();
 	//kinect.init(true); // shows infrared instead of RGB video image
-	kinect.init(false, false); // disable video image (faster fps)
+	//kinect.init(false, false); // disable video image (faster fps)
 
 	kinect.open();		// opens first available kinect
-	//kinect.open(1);	// open a kinect by id, starting with 0 (sorted by serial # lexicographically))
-	//kinect.open("A00362A08602047A");	// open a kinect using it's unique serial #
 
 	// print the intrinsic IR sensor values
-	if(kinect.isConnected()) {
-		ofLogNotice() << "sensor-emitter dist: " << kinect.getSensorEmitterDistance() << "cm";
-		ofLogNotice() << "sensor-camera dist:  " << kinect.getSensorCameraDistance() << "cm";
-		ofLogNotice() << "zero plane pixel size: " << kinect.getZeroPlanePixelSize() << "mm";
-		ofLogNotice() << "zero plane dist: " << kinect.getZeroPlaneDistance() << "mm";
-	}
+	// if (kinect.isConnected()) {
+	// 	ofLogNotice() << "sensor-emitter dist: " << kinect.getSensorEmitterDistance() << "cm";
+	// 	ofLogNotice() << "sensor-camera dist:  " << kinect.getSensorCameraDistance() << "cm";
+	// 	ofLogNotice() << "zero plane pixel size: " << kinect.getZeroPlanePixelSize() << "mm";
+	// 	ofLogNotice() << "zero plane dist: " << kinect.getZeroPlaneDistance() << "mm";
+	// }
 
 	colorImg.allocate(kinect.width, kinect.height);
 	grayImage.allocate(kinect.width, kinect.height);
@@ -36,7 +34,6 @@ void ofApp::setup() {
 	farThreshold = 132;
 	// nearThreshold = 230;
 	// farThreshold = 70;
-	bThreshWithOpenCV = true;
 
 	ofSetFrameRate(60);
 
@@ -48,11 +45,15 @@ void ofApp::setup() {
 	bDrawPointCloud = false;
 	bDrawDepth = true;
 	bDrawContour = true;
-	bDrawHelp = false;
+	bDrawHelp = true;
+
+	//haarFinder.setup("haarcascade_frontalface_default.xml");
+	//haarFinder.setup("haarcascade_mcs_nose.xml");
+	haarFinder.setup("haarcascade_frontalface_alt.xml");
 
 	//defining the real world coordinates of the window which is being headtracked is important for visual accuracy
-	float windowWidth = 300.0f;
-	float windowHeight = 200.0f;
+	windowWidth = 375.0f; // mm
+	windowHeight = 305.0f;
 
 	windowTopLeft = ofVec3f(-windowWidth / 2.0f,
 							+windowHeight / 2.0f,
@@ -68,6 +69,10 @@ void ofApp::setup() {
 	//camera.setDistance(100);
 	camera.disableMouseInput();
 
+	//camera.setupOffAxisViewPortal(windowTopLeft, windowBottomLeft, windowBottomRight);
+
+	//camera.lookAt(ofVec3f(0, 0, 0));
+
 	headPosition = ofVec3f(0, 0, 500.0f);
 }
 
@@ -79,33 +84,18 @@ void ofApp::update() {
 	kinect.update();
 
 	// there is a new frame and we are connected
-	if(kinect.isFrameNew()) {
+	if (kinect.isFrameNew()) {
 
 		// load grayscale depth image from the kinect source
 		grayImage.setFromPixels(kinect.getDepthPixels(), kinect.width, kinect.height);
 
 		// we do two thresholds - one for the far plane and one for the near plane
 		// we then do a cvAnd to get the pixels which are a union of the two thresholds
-		if(bThreshWithOpenCV) {
-			grayThreshNear = grayImage;
-			grayThreshFar = grayImage;
-			grayThreshNear.threshold(nearThreshold, true);
-			grayThreshFar.threshold(farThreshold);
-			cvAnd(grayThreshNear.getCvImage(), grayThreshFar.getCvImage(), grayImage.getCvImage(), NULL);
-		} else {
-
-			// or we do it ourselves - show people how they can work with the pixels
-			unsigned char * pix = grayImage.getPixels();
-
-			int numPixels = grayImage.getWidth() * grayImage.getHeight();
-			for(int i = 0; i < numPixels; i++) {
-				if(pix[i] < nearThreshold && pix[i] > farThreshold) {
-					pix[i] = 255;
-				} else {
-					pix[i] = 0;
-				}
-			}
-		}
+		grayThreshNear = grayImage;
+		grayThreshFar = grayImage;
+		grayThreshNear.threshold(nearThreshold, true);
+		grayThreshFar.threshold(farThreshold);
+		cvAnd(grayThreshNear.getCvImage(), grayThreshFar.getCvImage(), grayImage.getCvImage(), NULL);
 
 		// update the cv images
 		grayImage.flagImageChanged();
@@ -120,8 +110,36 @@ void ofApp::update() {
 			ofPoint centroid = blob.centroid;
 
 			// float distance = kinect.getDistanceAt(centroid.x, centroid.y);
-			headPosition = kinect.getWorldCoordinateAt(centroid.x, centroid.y);
-			headPosition.x *= -1.0f;
+			ofVec3f newHeadPosition = kinect.getWorldCoordinateAt(centroid.x, centroid.y);
+			if (newHeadPosition.x != 0.0f &&
+				newHeadPosition.y != 0.0f &&
+				newHeadPosition.z != 0.0f)
+			{
+				headPosition = newHeadPosition;
+				headPosition.x *= -1.0f;
+				headPosition.y *= -1.0f;
+			}
+		}
+
+		// face finding
+		//haarFinder.findHaarObjects(kinect.getPixelsRef());
+
+		if (haarFinder.blobs.size() > 0) {
+			//get the head position in camera pixel coordinates
+			const ofxCvBlob & blob = haarFinder.blobs.front();
+			float cameraHeadX = blob.centroid.x;
+			float cameraHeadY = blob.centroid.y;
+		
+			//do a really hacky interpretation of this, really you should be using something better to find the head (e.g. kinect skeleton tracking)
+		
+			//since camera isn't mirrored, high x in camera means -ve x in world
+			// float worldHeadX = ofMap(cameraHeadX, 0, video.getWidth(), windowBottomRight.x, windowBottomLeft.x);
+		
+			//low y in camera is +ve y in world
+			// float worldHeadY = ofMap(cameraHeadY, 0, video.getHeight(), windowTopLeft.y, windowBottomLeft.y);
+		
+			//set position in a pretty arbitrary way
+			//headPosition = ofVec3f(worldHeadX, worldHeadY, viewerDistance);
 		}
 	}
 }
@@ -141,7 +159,7 @@ void ofApp::draw() {
 
 	camera.setPosition(headPosition);
 	camera.setupOffAxisViewPortal(windowTopLeft, windowBottomLeft, windowBottomRight);
-	camera.lookAt(ofVec3f(0, 0, 0));
+	//camera.lookAt(ofVec3f(0, 0, 0));
 
 	camera.begin();
 	// ofRotateX(ofRadToDeg(.5));
@@ -152,19 +170,35 @@ void ofApp::draw() {
     ofDrawBox(100.0f);
 	ofPopStyle();
 
+	// top
     ofPushMatrix();
-	ofTranslate(0, 100, 0);
+	ofTranslate(0, windowHeight / 2, 0);
 	ofRotateZ(90);
 	ofSetColor(0,255,0);
-	ofDrawGridPlane(100);
+	ofDrawGridPlane(windowWidth / 2);
+    ofPopMatrix();
+	// bottom
+    ofPushMatrix();
+	ofTranslate(0, -windowHeight / 2, 0);
+	ofRotateZ(90);
+	ofSetColor(0,255,0);
+	ofDrawGridPlane(windowWidth / 2);
+    ofPopMatrix();
+	// left
+    ofPushMatrix();
+	ofTranslate(-windowWidth / 2, 0, 0);
+	ofRotateZ(0);
+	ofSetColor(0,255,0);
+	ofDrawGridPlane(windowHeight / 2);
+    ofPopMatrix();
+	// right
+    ofPushMatrix();
+	ofTranslate(windowWidth / 2, 0, 0);
+	ofRotateZ(0);
+	ofSetColor(0,255,0);
+	ofDrawGridPlane(windowHeight / 2);
     ofPopMatrix();
 
-    ofPushMatrix();
-	ofTranslate(0, -100, 0);
-	ofRotateZ(90);
-	ofSetColor(0,255,0);
-	ofDrawGridPlane(100);
-    ofPopMatrix();
 
 
 	ofPushStyle();
@@ -221,24 +255,14 @@ void ofApp::draw() {
 		ofPopStyle();
 	}
 
-	// ofVec3f headPosition(50,0,100.0f);
-
-	// camera.setPosition(headPosition);
-	// camera.setupOffAxisViewPortal(windowTopLeft, windowBottomLeft, windowBottomRight);
-	// camera.lookAt(ofVec3f(0, 0, 0));
-
-	// camera.begin();
-	// //camera.transformGL();
-
-	// // ofPushMatrix();
-	// // ofScale(0.002f, 0.002f, 0.002f);
-	// // ofNode().draw();
-	// // ofPopMatrix();
-
-	// //ofMultMatrix(camera.getProjectionMatrix().getInverse());
-
-	// //camera.restoreTransformGL();
-	// camera.end();
+	ofPushStyle();
+	ofSetColor(0, 255, 255);
+	ofNoFill();
+	for (unsigned int i = 0; i < haarFinder.blobs.size(); i++) {
+		ofRectangle cur = haarFinder.blobs[i].boundingRect;
+		ofRect(10 + cur.x / 2, 10 + cur.y / 2, cur.width / 2, cur.height / 2);
+	}
+	ofPopStyle();
 
 	if (bDrawHelp) {
 		// draw instructions
@@ -254,19 +278,19 @@ void ofApp::draw() {
 		// 				 << "motor / led / accel controls are not currently supported" << endl << endl;
 		// }
 
-		reportStream << "press p to switch between images and point cloud" << endl
-					 << "using opencv threshold = " << bThreshWithOpenCV <<" (press spacebar)" << endl
+		reportStream << "head pos: " << headPosition << endl
+			// << "press p to switch between images and point cloud" << endl
 					 << "set near threshold " << nearThreshold << " (press: + -)" << endl
 					 << "set far threshold " << farThreshold << " (press: < >) num blobs found " << contourFinder.nBlobs
 					 << ", fps: " << ofGetFrameRate() << endl
 					 << "h: toggle help, c: toggle contour, d: toggle depth" << endl;
 
-		if(kinect.hasCamTiltControl()) {
-			reportStream << "press UP and DOWN to change the tilt angle: " << angle << " degrees" << endl
-						 << "press 1-5 & 0 to change the led mode" << endl;
-		}
+		// if (kinect.hasCamTiltControl()) {
+		// 	reportStream << "press UP and DOWN to change the tilt angle: " << angle << " degrees" << endl
+		// 				 << "press 1-5 & 0 to change the led mode" << endl;
+		// }
 
-		ofDrawBitmapString(reportStream.str(), 20, 652);
+		ofDrawBitmapString(reportStream.str(), 20, 700);
 	}
 }
 
@@ -304,8 +328,9 @@ void ofApp::exit() {
 //--------------------------------------------------------------
 void ofApp::keyPressed (int key) {
 	switch (key) {
-	case ' ':
-		bThreshWithOpenCV = !bThreshWithOpenCV;
+
+	case 'f':
+		ofToggleFullscreen();
 		break;
 
 	case 'p':
