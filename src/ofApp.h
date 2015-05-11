@@ -64,4 +64,6 @@ class ofApp : public ofBaseApp {
 	ofVec3f windowTopLeft;
 	ofVec3f windowBottomLeft;
 	ofVec3f windowBottomRight;
+
+	ofVec3f headPosition;
 };

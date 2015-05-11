@@ -51,8 +51,8 @@ void ofApp::setup() {
 	bDrawHelp = false;
 
 	//defining the real world coordinates of the window which is being headtracked is important for visual accuracy
-	float windowWidth = 400.0f;
-	float windowHeight = 300.0f;
+	float windowWidth = 300.0f;
+	float windowHeight = 200.0f;
 
 	windowTopLeft = ofVec3f(-windowWidth / 2.0f,
 							+windowHeight / 2.0f,
@@ -64,13 +64,11 @@ void ofApp::setup() {
 								-windowHeight / 2.0f,
 								0.0f);
 
-	// this uses depth information for occlusion
-	// rather than always drawing things on top of each other
-	// ofEnableDepthTest();
-
 	// this sets the camera's distance from the object
-	camera.setDistance(100);
+	//camera.setDistance(100);
+	camera.disableMouseInput();
 
+	headPosition = ofVec3f(0, 0, 500.0f);
 }
 
 //--------------------------------------------------------------
@@ -116,10 +114,15 @@ void ofApp::update() {
 		// also, find holes is set to true so we will get interior contours as well....
 		contourFinder.findContours(grayImage, 50, (kinect.width*kinect.height)/2, 1, false);
 
-		// for (int i = 0; i < contourFinder.nBlobs; i++) {
-		// 	ofxCvBlob blob = contourFinder.blobs.at(i);
-		// 	// do something fun with blob
-		// }
+		if (contourFinder.nBlobs > 0) {
+			ofxCvBlob blob = contourFinder.blobs.at(0);
+
+			ofPoint centroid = blob.centroid;
+
+			// float distance = kinect.getDistanceAt(centroid.x, centroid.y);
+			headPosition = kinect.getWorldCoordinateAt(centroid.x, centroid.y);
+			headPosition.x *= -1.0f;
+		}
 	}
 }
 
@@ -133,6 +136,12 @@ void ofApp::draw() {
 	ofBackground(80);
 
 	ofSetDepthTest(true);
+
+	// ofVec3f headPosition(50, 0, distance);
+
+	camera.setPosition(headPosition);
+	camera.setupOffAxisViewPortal(windowTopLeft, windowBottomLeft, windowBottomRight);
+	camera.lookAt(ofVec3f(0, 0, 0));
 
 	camera.begin();
 	// ofRotateX(ofRadToDeg(.5));
