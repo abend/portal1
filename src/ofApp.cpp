@@ -150,6 +150,52 @@ void drawPoint(int x, int y, float dist) {
 	ofDrawBitmapString(buff, x, y);
 }
 
+void drawBackground(float width, float height) {
+	float halfw = width / 2;
+	float halfh = height / 2;
+	float biggest = max(halfw, halfh);
+
+	ofPushStyle();
+
+	ofSetColor(0,255,0);
+
+	// top
+    ofPushMatrix();
+	ofTranslate(0, halfh, 0);
+	ofRotateZ(90);
+	ofDrawGridPlane(halfw);
+    ofPopMatrix();
+
+	// bottom
+    ofPushMatrix();
+	ofTranslate(0, -halfh, 0);
+	ofRotateZ(90);
+	ofDrawGridPlane(halfw);
+    ofPopMatrix();
+
+	// left
+    ofPushMatrix();
+	ofTranslate(-halfw, 0, 0);
+	ofDrawGridPlane(halfh);
+    ofPopMatrix();
+
+	// right
+    ofPushMatrix();
+	ofTranslate(halfw, 0, 0);
+	ofDrawGridPlane(halfh);
+    ofPopMatrix();
+
+	// back
+    ofPushMatrix();
+	ofTranslate(0, 0, -biggest);
+	ofRotateY(90);
+	ofDrawGridPlane(halfh);
+    ofPopMatrix();
+
+	ofPopStyle();
+
+}
+
 void ofApp::draw() {
 	ofBackground(80);
 
@@ -165,41 +211,12 @@ void ofApp::draw() {
 	// ofRotateX(ofRadToDeg(.5));
 	// ofRotateY(ofRadToDeg(-.5));
 
-	ofPushStyle();
-	ofNoFill();
-    ofDrawBox(100.0f);
-	ofPopStyle();
+	// ofPushStyle();
+	// ofNoFill();
+    // ofDrawBox(100.0f);
+	// ofPopStyle();
 
-	// top
-    ofPushMatrix();
-	ofTranslate(0, windowHeight / 2, 0);
-	ofRotateZ(90);
-	ofSetColor(0,255,0);
-	ofDrawGridPlane(windowWidth / 2);
-    ofPopMatrix();
-	// bottom
-    ofPushMatrix();
-	ofTranslate(0, -windowHeight / 2, 0);
-	ofRotateZ(90);
-	ofSetColor(0,255,0);
-	ofDrawGridPlane(windowWidth / 2);
-    ofPopMatrix();
-	// left
-    ofPushMatrix();
-	ofTranslate(-windowWidth / 2, 0, 0);
-	ofRotateZ(0);
-	ofSetColor(0,255,0);
-	ofDrawGridPlane(windowHeight / 2);
-    ofPopMatrix();
-	// right
-    ofPushMatrix();
-	ofTranslate(windowWidth / 2, 0, 0);
-	ofRotateZ(0);
-	ofSetColor(0,255,0);
-	ofDrawGridPlane(windowHeight / 2);
-    ofPopMatrix();
-
-
+	drawBackground(windowWidth, windowHeight);
 
 	ofPushStyle();
 
