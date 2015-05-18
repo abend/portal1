@@ -4,6 +4,8 @@
 #include "ofxOpenCv.h"
 #include "ofxKinect.h"
 #include "ofxCvHaarFinder.h"
+#include "ofx3DModelLoader.h"
+#include "ofxAssimpModelLoader.h"
 
 // Windows users:
 // You MUST install the libfreenect kinect drivers in order to be able to use
@@ -25,6 +27,7 @@ class ofApp : public ofBaseApp {
 	
 	void setup();
 	void update();
+	void drawMesh();
 	void draw();
 	void exit();
 	
@@ -70,4 +73,13 @@ class ofApp : public ofBaseApp {
 
 	float windowWidth;
 	float windowHeight;
+
+	float headX;
+	float headY;
+
+	ofx3DModelLoader loader;
+
+	ofxAssimpModelLoader model;
+	ofMesh mesh;
+	ofLight	light;
 };

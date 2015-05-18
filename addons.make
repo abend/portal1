@@ -1,2 +1,4 @@
 ofxKinect
 ofxOpenCv
+ofx3DModelLoader
+ofxAssimpModelLoader

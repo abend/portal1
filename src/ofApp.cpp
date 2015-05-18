@@ -49,7 +49,7 @@ void ofApp::setup() {
 
 	//haarFinder.setup("haarcascade_frontalface_default.xml");
 	//haarFinder.setup("haarcascade_mcs_nose.xml");
-	haarFinder.setup("haarcascade_frontalface_alt.xml");
+	// haarFinder.setup("haarcascade_frontalface_alt.xml");
 
 	//defining the real world coordinates of the window which is being headtracked is important for visual accuracy
 	windowWidth = 375.0f; // mm
@@ -74,6 +74,18 @@ void ofApp::setup() {
 	//camera.lookAt(ofVec3f(0, 0, 0));
 
 	headPosition = ofVec3f(0, 0, 500.0f);
+
+	// loader.loadModel("monkey1.3ds", 1);
+	// loader.loadModel("boxplane.3ds", 20);
+	//loader.loadModel("1/sofa 11.3DS", 1);
+	//	loader.setPosition(
+
+    //model.loadModel("astroBoy_walk.dae", true);
+	model.loadModel("monkey.dae");
+    //model.setPosition(ofGetWidth() * 0.5, (float)ofGetHeight() * 0.75 , 0);
+    model.setLoopStateForAllAnimations(OF_LOOP_NORMAL);
+    model.playAllAnimations();
+
 }
 
 //--------------------------------------------------------------
@@ -106,23 +118,37 @@ void ofApp::update() {
 
 		if (contourFinder.nBlobs > 0) {
 			ofxCvBlob blob = contourFinder.blobs.at(0);
-
 			ofPoint centroid = blob.centroid;
+			ofRectangle bbox = blob.boundingRect;
 
-			// float distance = kinect.getDistanceAt(centroid.x, centroid.y);
-			ofVec3f newHeadPosition = kinect.getWorldCoordinateAt(centroid.x, centroid.y);
-			if (newHeadPosition.x != 0.0f &&
-				newHeadPosition.y != 0.0f &&
-				newHeadPosition.z != 0.0f)
-			{
+			float y = centroid.y;//bbox.y + 50;  // arbitrary
+			float x = centroid.x;
+
+			// search around where we think the head is till we find something
+			float perturb = 2.0f;
+			for (float dist = 0; dist == 0; dist = kinect.getDistanceAt(x, y)) {
+				x += perturb;
+				//perturb += -perturb;
+				perturb *= -1.1;
+			}
+
+			headX = x;
+			headY = y;
+
+			ofVec3f newHeadPosition = kinect.getWorldCoordinateAt(x, y);
+			// if (newHeadPosition.x != 0.0f &&
+			// 	newHeadPosition.y != 0.0f &&
+			// 	newHeadPosition.z != 0.0f)
+			// {
 				headPosition = newHeadPosition;
 				headPosition.x *= -1.0f;
 				headPosition.y *= -1.0f;
-			}
+			// }
 		}
 
 		// face finding
-		//haarFinder.findHaarObjects(kinect.getPixelsRef());
+		/*
+		haarFinder.findHaarObjects(kinect.getPixelsRef());
 
 		if (haarFinder.blobs.size() > 0) {
 			//get the head position in camera pixel coordinates
@@ -133,15 +159,24 @@ void ofApp::update() {
 			//do a really hacky interpretation of this, really you should be using something better to find the head (e.g. kinect skeleton tracking)
 		
 			//since camera isn't mirrored, high x in camera means -ve x in world
-			// float worldHeadX = ofMap(cameraHeadX, 0, video.getWidth(), windowBottomRight.x, windowBottomLeft.x);
+			float worldHeadX = ofMap(cameraHeadX, 0, kinect.getWidth(), windowBottomRight.x, windowBottomLeft.x);
 		
 			//low y in camera is +ve y in world
-			// float worldHeadY = ofMap(cameraHeadY, 0, video.getHeight(), windowTopLeft.y, windowBottomLeft.y);
+			float worldHeadY = ofMap(cameraHeadY, 0, kinect.getHeight(), windowTopLeft.y, windowBottomLeft.y);
 		
 			//set position in a pretty arbitrary way
-			//headPosition = ofVec3f(worldHeadX, worldHeadY, viewerDistance);
+			headPosition = ofVec3f(worldHeadX, worldHeadY, kinect.getDistanceAt(worldHeadX, worldHeadY));
 		}
+		*/
 	}
+
+    model.update();
+    
+    // if(bAnimateMouse) {
+    //     model.setPositionForAllAnimations(animationPosition);
+    // }
+
+    mesh = model.getCurrentAnimatedMesh(0);
 }
 
 void drawPoint(int x, int y, float dist) {
@@ -156,7 +191,7 @@ void drawBackground(float width, float height) {
 	float biggest = max(halfw, halfh);
 
 	ofPushStyle();
-
+	/*
 	ofSetColor(0,255,0);
 
 	// top
@@ -191,9 +226,106 @@ void drawBackground(float width, float height) {
 	ofRotateY(90);
 	ofDrawGridPlane(halfh);
     ofPopMatrix();
-
+	*/
 	ofPopStyle();
 
+}
+
+void drawScene() {
+	ofPushStyle();
+
+	ofSetLineWidth(3.0f);
+
+	ofSetColor(255,0,0);
+	ofFill();
+	ofDrawBox(50);
+	ofNoFill();
+	ofSetColor(0);
+	ofDrawBox(50);
+
+	ofPushMatrix();
+	ofTranslate(-100,-50,100);
+	ofFill();
+	ofSetColor(0,0,255);
+	ofDrawBox(25);
+	ofNoFill();
+	ofSetColor(0);
+	ofDrawBox(25);
+	ofPopMatrix();
+
+	ofPushMatrix();
+	ofTranslate(100, 45/2 - 305.0f / 2, 0);
+	ofFill();
+	ofSetColor(128,0,255);
+	ofDrawBox(45);
+	ofNoFill();
+	ofSetColor(0);
+	ofDrawBox(45);
+	ofPopMatrix();
+
+	ofPopStyle();
+}
+
+void ofApp::drawMesh(){
+    ofSetColor(255);
+    
+    ofEnableBlendMode(OF_BLENDMODE_ALPHA);
+    
+	ofEnableDepthTest();
+    
+    glShadeModel(GL_SMOOTH); //some model / light stuff
+    light.enable();
+    ofEnableSeparateSpecularLight();
+
+    // ofPushMatrix();
+    // ofTranslate(model.getPosition().x+100, model.getPosition().y, 0);
+    //ofRotate(-mouseX, 0, 1, 0);
+    // ofTranslate(-model.getPosition().x, -model.getPosition().y, 0);
+    model.drawFaces();
+    // ofPopMatrix();
+
+   if(ofGetGLProgrammableRenderer()){
+		glPushAttrib(GL_ALL_ATTRIB_BITS);
+		glPushClientAttrib(GL_CLIENT_ALL_ATTRIB_BITS);
+    }
+    glEnable(GL_NORMALIZE);
+
+    // ofPushMatrix();
+    // ofTranslate(model.getPosition().x-300, model.getPosition().y, 0);
+    // ofRotate(-mouseX, 0, 1, 0);
+    // ofTranslate(-model.getPosition().x, -model.getPosition().y, 0);
+    
+    // ofxAssimpMeshHelper & meshHelper = model.getMeshHelper(0);
+    
+    // ofMultMatrix(model.getModelMatrix());
+    // ofMultMatrix(meshHelper.matrix);
+    
+    // ofMaterial & material = meshHelper.material;
+    // if(meshHelper.hasTexture()){
+    //     meshHelper.getTextureRef().bind();
+    // }
+    // material.begin();
+    // mesh.drawWireframe();
+    // material.end();
+    // if(meshHelper.hasTexture()){
+    //     meshHelper.getTextureRef().unbind();
+    // }
+    // ofPopMatrix();
+
+    if(ofGetGLProgrammableRenderer()){
+    	glPopAttrib();
+    }
+    
+    ofDisableDepthTest();
+    light.disable();
+    ofDisableLighting();
+    ofDisableSeparateSpecularLight();
+    
+    // ofSetColor(255, 255, 255 );
+    // ofDrawBitmapString("fps: "+ofToString(ofGetFrameRate(), 2), 10, 15);
+    // ofDrawBitmapString("keys 1-5 load models, spacebar to trigger animation", 10, 30);
+    // ofDrawBitmapString("drag to control animation with mouseY", 10, 45);
+    // ofDrawBitmapString("num animations for this model: " + ofToString(model.getAnimationCount()), 10, 60);
 }
 
 void ofApp::draw() {
@@ -201,43 +333,18 @@ void ofApp::draw() {
 
 	ofSetDepthTest(true);
 
-	// ofVec3f headPosition(50, 0, distance);
-
 	camera.setPosition(headPosition);
 	camera.setupOffAxisViewPortal(windowTopLeft, windowBottomLeft, windowBottomRight);
 	//camera.lookAt(ofVec3f(0, 0, 0));
 
 	camera.begin();
-	// ofRotateX(ofRadToDeg(.5));
-	// ofRotateY(ofRadToDeg(-.5));
-
-	// ofPushStyle();
-	// ofNoFill();
-    // ofDrawBox(100.0f);
-	// ofPopStyle();
 
 	drawBackground(windowWidth, windowHeight);
+	//drawScene();
 
-	ofPushStyle();
+	//loader.draw();
 
-	ofSetColor(255,0,0);
-	ofFill();
-	ofDrawBox(30);
-	ofNoFill();
-	ofSetColor(0);
-	ofDrawBox(30);
-
-	ofPushMatrix();
-	ofTranslate(0,0,20);
-	ofSetColor(0,0,255);
-	ofFill();
-	ofDrawBox(5);
-	ofNoFill();
-	ofSetColor(0);
-	ofDrawBox(5);
-	ofPopMatrix();
-
-	ofPopStyle();
+	drawMesh();
 
 	camera.end();
 
@@ -272,13 +379,19 @@ void ofApp::draw() {
 		ofPopStyle();
 	}
 
+	// ofPushStyle();
+	// ofSetColor(0, 255, 255);
+	// ofNoFill();
+	// for (unsigned int i = 0; i < haarFinder.blobs.size(); i++) {
+	// 	ofRectangle cur = haarFinder.blobs[i].boundingRect;
+	// 	ofRect(10 + cur.x / 2, 10 + cur.y / 2, cur.width / 2, cur.height / 2);
+	// }
+	// ofPopStyle();
+
 	ofPushStyle();
-	ofSetColor(0, 255, 255);
-	ofNoFill();
-	for (unsigned int i = 0; i < haarFinder.blobs.size(); i++) {
-		ofRectangle cur = haarFinder.blobs[i].boundingRect;
-		ofRect(10 + cur.x / 2, 10 + cur.y / 2, cur.width / 2, cur.height / 2);
-	}
+	ofSetColor(255, 255, 64);
+	ofCircle(headX / 2 + 10, headY / 2 + 10, 5);
+	//ofRect(headX - 2, headY - 2, headX + 2, headY + 2);
 	ofPopStyle();
 
 	if (bDrawHelp) {
