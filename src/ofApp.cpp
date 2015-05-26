@@ -17,10 +17,10 @@ void ofApp::setup() {
 
 	kinect.open();		// opens first available kinect
 
-	colorImg.allocate(kinect.width, kinect.height);
-	grayImage.allocate(kinect.width, kinect.height);
-	grayThreshNear.allocate(kinect.width, kinect.height);
-	grayThreshFar.allocate(kinect.width, kinect.height);
+	colorImage.allocate(kinect.width, kinect.height);
+	depthImage.allocate(kinect.width, kinect.height);
+	depthThreshNear.allocate(kinect.width, kinect.height);
+	depthThreshFar.allocate(kinect.width, kinect.height);
 
 	nearThreshold = 255;
 	farThreshold = 132;
@@ -34,12 +34,11 @@ void ofApp::setup() {
 	// kinect.setCameraTiltAngle(angle);
 
 	// start from the front
-	bDrawPointCloud = false;
 	bDrawDepth = false;
 	bDrawContour = true;
 	bDrawHelp = true;
 
-	//haarFinder.setup("haarcascade_frontalface_default.xml");
+	haarFinder.setup("haarcascade_frontalface_default.xml");
 	//haarFinder.setup("haarcascade_mcs_nose.xml");
 	// haarFinder.setup("haarcascade_frontalface_alt.xml");
 
@@ -93,23 +92,49 @@ void ofApp::update() {
 
 ofVec3f ofApp::calcHeadPosition() {
 	// load grayscale depth image from the kinect source
-	grayImage.setFromPixels(kinect.getDepthPixels(), kinect.width, kinect.height);
+	depthImage.setFromPixels(kinect.getDepthPixels(), kinect.width, kinect.height);
 
 	// we do two thresholds - one for the far plane and one for the near plane
 	// we then do a cvAnd to get the pixels which are a union of the two thresholds
-	grayThreshNear = grayImage;
-	grayThreshFar = grayImage;
-	grayThreshNear.threshold(nearThreshold, true);
-	grayThreshFar.threshold(farThreshold);
-	cvAnd(grayThreshNear.getCvImage(), grayThreshFar.getCvImage(), grayImage.getCvImage(), NULL);
+	depthThreshNear = depthImage;
+	depthThreshFar = depthImage;
+	depthThreshNear.threshold(nearThreshold, true);
+	depthThreshFar.threshold(farThreshold);
+	cvAnd(depthThreshNear.getCvImage(), depthThreshFar.getCvImage(), depthImage.getCvImage(), NULL);
 
 	// update the cv images
-	grayImage.flagImageChanged();
+	depthImage.flagImageChanged();
 
 	// find contours which are between the size of 20 pixels and 1/3 the w*h pixels.
 	// also, find holes is set to true so we will get interior contours as well....
-	contourFinder.findContours(grayImage, 50, (kinect.width*kinect.height)/2, 1, false);
+	contourFinder.findContours(depthImage, 50, (kinect.width*kinect.height)/2, 1, false);
 
+	colorImage.setFromPixels(kinect.getPixelsRef());
+	grayImage = colorImage; // convert to grayscale
+	haarFinder.findHaarObjects(grayImage);
+
+	if (haarFinder.blobs.size() > 0) {
+		//get the head position in camera pixel coordinates
+		const ofxCvBlob & blob = haarFinder.blobs.front();
+		float x = blob.centroid.x;
+		float y = blob.centroid.y;
+
+		ofVec3f newHeadPosition = kinect.getWorldCoordinateAt(x, y);
+		
+		// //do a really hacky interpretation of this, really you should be using something better to find the head (e.g. kinect skeleton tracking)
+		
+		// //since camera isn't mirrored, high x in camera means -ve x in world
+		// float worldHeadX = ofMap(cameraHeadX, 0, video.getWidth(), windowBottomRight.x, windowBottomLeft.x);
+		
+		// //low y in camera is +ve y in world
+		// float worldHeadY = ofMap(cameraHeadY, 0, video.getHeight(), windowTopLeft.y, windowBottomLeft.y);
+		
+		// //set position in a pretty arbitrary way
+		// headPosition = ofVec3f(worldHeadX, worldHeadY, viewerDistance);
+
+		return newHeadPosition;
+	}
+	/*
 	if (contourFinder.nBlobs > 0) {
 		ofxCvBlob blob = contourFinder.blobs.at(0);
 		ofPoint centroid = blob.centroid;
@@ -141,9 +166,15 @@ ofVec3f ofApp::calcHeadPosition() {
 		newHeadPosition.y *= -1.0f;
 		// }
 
+
+float ofxKinect::getCurrentCameraTiltAngle()
+
+
+float ofxKinect::getAccelPitch()
+
 		return newHeadPosition;
 	}
-
+	*/
 	return ofVec3f(0, 0, 500.0f);
 }
 
@@ -375,14 +406,14 @@ void ofApp::draw() {
 		ofPopStyle();
 	}
 
-	// ofPushStyle();
-	// ofSetColor(0, 255, 255);
-	// ofNoFill();
-	// for (unsigned int i = 0; i < haarFinder.blobs.size(); i++) {
-	// 	ofRectangle cur = haarFinder.blobs[i].boundingRect;
-	// 	ofRect(10 + cur.x / 2, 10 + cur.y / 2, cur.width / 2, cur.height / 2);
-	// }
-	// ofPopStyle();
+	ofPushStyle();
+	ofSetColor(0, 255, 255);
+	ofNoFill();
+	for (unsigned int i = 0; i < haarFinder.blobs.size(); i++) {
+		ofRectangle cur = haarFinder.blobs[i].boundingRect;
+		ofRect(10 + cur.x / 2, 10 + cur.y / 2, cur.width / 2, cur.height / 2);
+	}
+	ofPopStyle();
 
 	ofPushStyle();
 	ofSetColor(255, 255, 64);
@@ -420,31 +451,6 @@ void ofApp::draw() {
 	}
 }
 
-void ofApp::drawPointCloud() {
-	int w = 640;
-	int h = 480;
-	ofMesh mesh;
-	mesh.setMode(OF_PRIMITIVE_POINTS);
-	int step = 2;
-	for(int y = 0; y < h; y += step) {
-		for(int x = 0; x < w; x += step) {
-			if(kinect.getDistanceAt(x, y) > 0) {
-				mesh.addColor(kinect.getColorAt(x,y));
-				mesh.addVertex(kinect.getWorldCoordinateAt(x, y));
-			}
-		}
-	}
-	glPointSize(3);
-	ofPushMatrix();
-	// the projected points are 'upside down' and 'backwards'
-	ofScale(1, -1, -1);
-	ofTranslate(0, 0, -1000); // center the points a bit
-	ofEnableDepthTest();
-	mesh.drawVertices();
-	ofDisableDepthTest();
-	ofPopMatrix();
-}
-
 //--------------------------------------------------------------
 void ofApp::exit() {
 	// kinect.setCameraTiltAngle(0); // zero the tilt on exit
@@ -461,10 +467,6 @@ void ofApp::keyPressed (int key) {
 
 	case 'f':
 		ofToggleFullscreen();
-		break;
-
-	case 'p':
-		bDrawPointCloud = !bDrawPointCloud;
 		break;
 
 	case 'h':

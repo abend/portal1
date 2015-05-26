@@ -31,7 +31,6 @@ class ofApp : public ofBaseApp {
 	void draw();
 	void exit();
 	
-	void drawPointCloud();
 	void drawCamera();
 	
 	void keyPressed(int key);
@@ -44,16 +43,16 @@ class ofApp : public ofBaseApp {
 	
 	ofxKinect kinect;
 	
-	ofxCvColorImage colorImg;
-	
-	ofxCvGrayscaleImage grayImage; // grayscale depth image
-	ofxCvGrayscaleImage grayThreshNear; // the near thresholded image
-	ofxCvGrayscaleImage grayThreshFar; // the far thresholded image
+	ofxCvColorImage colorImage;
+	ofxCvGrayscaleImage grayImage;
+
+	ofxCvGrayscaleImage depthImage; // grayscale depth image
+	ofxCvGrayscaleImage depthThreshNear; // the near thresholded image
+	ofxCvGrayscaleImage depthThreshFar; // the far thresholded image
 	
 	ofxCvContourFinder contourFinder;
 	ofxCvHaarFinder haarFinder;
 	
-	bool bDrawPointCloud;
 	bool bDrawDepth;
 	bool bDrawContour;
 	bool bDrawHelp;
@@ -63,8 +62,6 @@ class ofApp : public ofBaseApp {
 	
 	int angle;
 	
-	// used for viewing the point cloud
-	// ofEasyCam easyCam;
 	ofEasyCam camera;
 	ofEasyCam previewCamera;
 	bool usePreview;
