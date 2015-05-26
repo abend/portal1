@@ -17,14 +17,6 @@ void ofApp::setup() {
 
 	kinect.open();		// opens first available kinect
 
-	// print the intrinsic IR sensor values
-	// if (kinect.isConnected()) {
-	// 	ofLogNotice() << "sensor-emitter dist: " << kinect.getSensorEmitterDistance() << "cm";
-	// 	ofLogNotice() << "sensor-camera dist:  " << kinect.getSensorCameraDistance() << "cm";
-	// 	ofLogNotice() << "zero plane pixel size: " << kinect.getZeroPlanePixelSize() << "mm";
-	// 	ofLogNotice() << "zero plane dist: " << kinect.getZeroPlaneDistance() << "mm";
-	// }
-
 	colorImg.allocate(kinect.width, kinect.height);
 	grayImage.allocate(kinect.width, kinect.height);
 	grayThreshNear.allocate(kinect.width, kinect.height);
@@ -43,7 +35,7 @@ void ofApp::setup() {
 
 	// start from the front
 	bDrawPointCloud = false;
-	bDrawDepth = true;
+	bDrawDepth = false;
 	bDrawContour = true;
 	bDrawHelp = true;
 
@@ -51,7 +43,7 @@ void ofApp::setup() {
 	//haarFinder.setup("haarcascade_mcs_nose.xml");
 	// haarFinder.setup("haarcascade_frontalface_alt.xml");
 
-	//defining the real world coordinates of the window which is being headtracked is important for visual accuracy
+	// real world coordinates of the "window"
 	windowWidth = 375.0f; // mm
 	windowHeight = 305.0f;
 
@@ -74,7 +66,6 @@ void ofApp::setup() {
 	model.setRotation(0, -180, 0, 0, 1);
     //model.setLoopStateForAllAnimations(OF_LOOP_NORMAL);
     //model.playAllAnimations();
-
 
 	usePreview = true;
 	//previewCamera.setDistance(3.0f);
@@ -145,9 +136,9 @@ ofVec3f ofApp::calcHeadPosition() {
 		// 	newHeadPosition.y != 0.0f &&
 		// 	newHeadPosition.z != 0.0f)
 		// {
-		headPosition = newHeadPosition;
-		headPosition.x *= -1.0f;
-		headPosition.y *= -1.0f;
+		//headPosition = newHeadPosition;
+		newHeadPosition.x *= -1.0f;
+		newHeadPosition.y *= -1.0f;
 		// }
 
 		return newHeadPosition;
@@ -299,16 +290,16 @@ void ofApp::drawMesh(){
 }
 
 void ofApp::drawCamera() {
-	ofPushMatrix();
-
 	ofVec3f campos = camera.getPosition();
-	ofTranslate(campos);
-		
+
 	ofPushStyle();
+
+	// camera body
+	ofPushMatrix();
+	ofTranslate(campos);
 	ofSetColor(255);
 	ofFill();
 	ofDrawBox(10.0f);
-	ofPopStyle();
 
 	ofPopMatrix();
 
@@ -322,7 +313,8 @@ void ofApp::drawCamera() {
 	window.addVertex(campos);
 	window.addVertex(windowBottomRight);
 	window.draw();
-	glPointSize(5.0f);
+
+	ofPopStyle();
 }
 
 void ofApp::draw() {
