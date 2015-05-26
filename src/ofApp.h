@@ -32,12 +32,15 @@ class ofApp : public ofBaseApp {
 	void exit();
 	
 	void drawPointCloud();
+	void drawCamera();
 	
 	void keyPressed(int key);
 	void mouseDragged(int x, int y, int button);
 	void mousePressed(int x, int y, int button);
 	void mouseReleased(int x, int y, int button);
 	void windowResized(int w, int h);
+
+	ofVec3f calcHeadPosition();
 	
 	ofxKinect kinect;
 	
@@ -63,6 +66,10 @@ class ofApp : public ofBaseApp {
 	// used for viewing the point cloud
 	// ofEasyCam easyCam;
 	ofEasyCam camera;
+	ofEasyCam previewCamera;
+	bool usePreview;
+	ofVboMesh window;
+
 
 	//the view window is defined by 3 corners
 	ofVec3f windowTopLeft;
@@ -77,7 +84,7 @@ class ofApp : public ofBaseApp {
 	float headX;
 	float headY;
 
-	ofx3DModelLoader loader;
+	// ofx3DModelLoader loader;
 
 	ofxAssimpModelLoader model;
 	ofMesh mesh;

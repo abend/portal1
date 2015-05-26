@@ -65,118 +65,95 @@ void ofApp::setup() {
 								-windowHeight / 2.0f,
 								0.0f);
 
-	// this sets the camera's distance from the object
-	//camera.setDistance(100);
 	camera.disableMouseInput();
-
-	//camera.setupOffAxisViewPortal(windowTopLeft, windowBottomLeft, windowBottomRight);
-
-	//camera.lookAt(ofVec3f(0, 0, 0));
 
 	headPosition = ofVec3f(0, 0, 500.0f);
 
-	// loader.loadModel("monkey1.3ds", 1);
-	// loader.loadModel("boxplane.3ds", 20);
-	//loader.loadModel("1/sofa 11.3DS", 1);
-	//	loader.setPosition(
-
     //model.loadModel("astroBoy_walk.dae", true);
-	model.loadModel("monkey.dae");
-    //model.setPosition(ofGetWidth() * 0.5, (float)ofGetHeight() * 0.75 , 0);
-    model.setLoopStateForAllAnimations(OF_LOOP_NORMAL);
-    model.playAllAnimations();
+	model.loadModel("scene.dae");
+	model.setRotation(0, -180, 0, 0, 1);
+    //model.setLoopStateForAllAnimations(OF_LOOP_NORMAL);
+    //model.playAllAnimations();
+
+
+	usePreview = true;
+	//previewCamera.setDistance(3.0f);
+	previewCamera.setNearClip(0.01f);
+	previewCamera.setFarClip(5000.0f);
+	previewCamera.setPosition(000.0f, 000.0f, 1000.0f);
+	previewCamera.lookAt(ofVec3f(0.0f, 0.0f, 0.0f));
+	
 
 }
 
 //--------------------------------------------------------------
 void ofApp::update() {
-
-	// ofBackground(100, 100, 100);
-
 	kinect.update();
 
-	// there is a new frame and we are connected
 	if (kinect.isFrameNew()) {
-
-		// load grayscale depth image from the kinect source
-		grayImage.setFromPixels(kinect.getDepthPixels(), kinect.width, kinect.height);
-
-		// we do two thresholds - one for the far plane and one for the near plane
-		// we then do a cvAnd to get the pixels which are a union of the two thresholds
-		grayThreshNear = grayImage;
-		grayThreshFar = grayImage;
-		grayThreshNear.threshold(nearThreshold, true);
-		grayThreshFar.threshold(farThreshold);
-		cvAnd(grayThreshNear.getCvImage(), grayThreshFar.getCvImage(), grayImage.getCvImage(), NULL);
-
-		// update the cv images
-		grayImage.flagImageChanged();
-
-		// find contours which are between the size of 20 pixels and 1/3 the w*h pixels.
-		// also, find holes is set to true so we will get interior contours as well....
-		contourFinder.findContours(grayImage, 50, (kinect.width*kinect.height)/2, 1, false);
-
-		if (contourFinder.nBlobs > 0) {
-			ofxCvBlob blob = contourFinder.blobs.at(0);
-			ofPoint centroid = blob.centroid;
-			ofRectangle bbox = blob.boundingRect;
-
-			float y = centroid.y;//bbox.y + 50;  // arbitrary
-			float x = centroid.x;
-
-			// search around where we think the head is till we find something
-			float perturb = 2.0f;
-			for (float dist = 0; dist == 0; dist = kinect.getDistanceAt(x, y)) {
-				x += perturb;
-				//perturb += -perturb;
-				perturb *= -1.1;
-			}
-
-			headX = x;
-			headY = y;
-
-			ofVec3f newHeadPosition = kinect.getWorldCoordinateAt(x, y);
-			// if (newHeadPosition.x != 0.0f &&
-			// 	newHeadPosition.y != 0.0f &&
-			// 	newHeadPosition.z != 0.0f)
-			// {
-				headPosition = newHeadPosition;
-				headPosition.x *= -1.0f;
-				headPosition.y *= -1.0f;
-			// }
-		}
-
-		// face finding
-		/*
-		haarFinder.findHaarObjects(kinect.getPixelsRef());
-
-		if (haarFinder.blobs.size() > 0) {
-			//get the head position in camera pixel coordinates
-			const ofxCvBlob & blob = haarFinder.blobs.front();
-			float cameraHeadX = blob.centroid.x;
-			float cameraHeadY = blob.centroid.y;
-		
-			//do a really hacky interpretation of this, really you should be using something better to find the head (e.g. kinect skeleton tracking)
-		
-			//since camera isn't mirrored, high x in camera means -ve x in world
-			float worldHeadX = ofMap(cameraHeadX, 0, kinect.getWidth(), windowBottomRight.x, windowBottomLeft.x);
-		
-			//low y in camera is +ve y in world
-			float worldHeadY = ofMap(cameraHeadY, 0, kinect.getHeight(), windowTopLeft.y, windowBottomLeft.y);
-		
-			//set position in a pretty arbitrary way
-			headPosition = ofVec3f(worldHeadX, worldHeadY, kinect.getDistanceAt(worldHeadX, worldHeadY));
-		}
-		*/
+		headPosition = calcHeadPosition();
 	}
 
-    model.update();
-    
-    // if(bAnimateMouse) {
-    //     model.setPositionForAllAnimations(animationPosition);
-    // }
+    //model.update();
 
     mesh = model.getCurrentAnimatedMesh(0);
+}
+
+
+ofVec3f ofApp::calcHeadPosition() {
+	// load grayscale depth image from the kinect source
+	grayImage.setFromPixels(kinect.getDepthPixels(), kinect.width, kinect.height);
+
+	// we do two thresholds - one for the far plane and one for the near plane
+	// we then do a cvAnd to get the pixels which are a union of the two thresholds
+	grayThreshNear = grayImage;
+	grayThreshFar = grayImage;
+	grayThreshNear.threshold(nearThreshold, true);
+	grayThreshFar.threshold(farThreshold);
+	cvAnd(grayThreshNear.getCvImage(), grayThreshFar.getCvImage(), grayImage.getCvImage(), NULL);
+
+	// update the cv images
+	grayImage.flagImageChanged();
+
+	// find contours which are between the size of 20 pixels and 1/3 the w*h pixels.
+	// also, find holes is set to true so we will get interior contours as well....
+	contourFinder.findContours(grayImage, 50, (kinect.width*kinect.height)/2, 1, false);
+
+	if (contourFinder.nBlobs > 0) {
+		ofxCvBlob blob = contourFinder.blobs.at(0);
+		ofPoint centroid = blob.centroid;
+		ofRectangle bbox = blob.boundingRect;
+
+		float y = centroid.y;//bbox.y + 50;  // arbitrary
+		float x = centroid.x;
+
+		// search around where we think the head is till we find something
+		// float perturb = 2.0f;
+		// for (float dist = 0; dist == 0; dist = kinect.getDistanceAt(x, y)) {
+		// 	x += perturb;
+		// 	//perturb += -perturb;
+		// 	perturb *= -1.1;
+		// }
+
+		// float dist = kinect.getDistanceAt(x, y);
+
+		headX = x;
+		headY = y;
+
+		ofVec3f newHeadPosition = kinect.getWorldCoordinateAt(x, y);
+		// if (newHeadPosition.x != 0.0f &&
+		// 	newHeadPosition.y != 0.0f &&
+		// 	newHeadPosition.z != 0.0f)
+		// {
+		headPosition = newHeadPosition;
+		headPosition.x *= -1.0f;
+		headPosition.y *= -1.0f;
+		// }
+
+		return newHeadPosition;
+	}
+
+	return ofVec3f(0, 0, 500.0f);
 }
 
 void drawPoint(int x, int y, float dist) {
@@ -191,7 +168,6 @@ void drawBackground(float width, float height) {
 	float biggest = max(halfw, halfh);
 
 	ofPushStyle();
-	/*
 	ofSetColor(0,255,0);
 
 	// top
@@ -226,7 +202,7 @@ void drawBackground(float width, float height) {
 	ofRotateY(90);
 	ofDrawGridPlane(halfh);
     ofPopMatrix();
-	*/
+
 	ofPopStyle();
 
 }
@@ -274,8 +250,8 @@ void ofApp::drawMesh(){
 	ofEnableDepthTest();
     
     glShadeModel(GL_SMOOTH); //some model / light stuff
-    light.enable();
-    ofEnableSeparateSpecularLight();
+    //light.enable();
+    //ofEnableSeparateSpecularLight();
 
     // ofPushMatrix();
     // ofTranslate(model.getPosition().x+100, model.getPosition().y, 0);
@@ -284,10 +260,10 @@ void ofApp::drawMesh(){
     model.drawFaces();
     // ofPopMatrix();
 
-   if(ofGetGLProgrammableRenderer()){
-		glPushAttrib(GL_ALL_ATTRIB_BITS);
-		glPushClientAttrib(GL_CLIENT_ALL_ATTRIB_BITS);
-    }
+   // if(ofGetGLProgrammableRenderer()){
+   // 		glPushAttrib(GL_ALL_ATTRIB_BITS);
+   // 		glPushClientAttrib(GL_CLIENT_ALL_ATTRIB_BITS);
+   //  }
     glEnable(GL_NORMALIZE);
 
     // ofPushMatrix();
@@ -312,20 +288,41 @@ void ofApp::drawMesh(){
     // }
     // ofPopMatrix();
 
-    if(ofGetGLProgrammableRenderer()){
-    	glPopAttrib();
-    }
+    // if(ofGetGLProgrammableRenderer()){
+    // 	glPopAttrib();
+    // }
     
     ofDisableDepthTest();
-    light.disable();
-    ofDisableLighting();
-    ofDisableSeparateSpecularLight();
-    
-    // ofSetColor(255, 255, 255 );
-    // ofDrawBitmapString("fps: "+ofToString(ofGetFrameRate(), 2), 10, 15);
-    // ofDrawBitmapString("keys 1-5 load models, spacebar to trigger animation", 10, 30);
-    // ofDrawBitmapString("drag to control animation with mouseY", 10, 45);
-    // ofDrawBitmapString("num animations for this model: " + ofToString(model.getAnimationCount()), 10, 60);
+    // light.disable();
+    // ofDisableLighting();
+    // ofDisableSeparateSpecularLight();
+}
+
+void ofApp::drawCamera() {
+	ofPushMatrix();
+
+	ofVec3f campos = camera.getPosition();
+	ofTranslate(campos);
+		
+	ofPushStyle();
+	ofSetColor(255);
+	ofFill();
+	ofDrawBox(10.0f);
+	ofPopStyle();
+
+	ofPopMatrix();
+
+	// camera frustum
+	window.clear();
+	window.setMode(OF_PRIMITIVE_LINES);
+	window.addVertex(campos);
+	window.addVertex(windowTopLeft);
+	window.addVertex(campos);
+	window.addVertex(windowBottomLeft);
+	window.addVertex(campos);
+	window.addVertex(windowBottomRight);
+	window.draw();
+	glPointSize(5.0f);
 }
 
 void ofApp::draw() {
@@ -335,19 +332,26 @@ void ofApp::draw() {
 
 	camera.setPosition(headPosition);
 	camera.setupOffAxisViewPortal(windowTopLeft, windowBottomLeft, windowBottomRight);
-	//camera.lookAt(ofVec3f(0, 0, 0));
 
-	camera.begin();
+	if (usePreview) {
+		previewCamera.begin();
+	} else {
+		camera.begin();
+	}
 
 	drawBackground(windowWidth, windowHeight);
-	//drawScene();
-
+	drawScene();
 	//loader.draw();
 
-	drawMesh();
+	//drawMesh();
 
-	camera.end();
+	if (usePreview) drawCamera();
 
+	if (usePreview) {
+		previewCamera.end();
+	} else {
+		camera.end();
+	}
 
 	ofSetDepthTest(false);
 
@@ -458,6 +462,10 @@ void ofApp::exit() {
 //--------------------------------------------------------------
 void ofApp::keyPressed (int key) {
 	switch (key) {
+
+	case ' ':
+		usePreview = !usePreview;
+		break;
 
 	case 'f':
 		ofToggleFullscreen();
