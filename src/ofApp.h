@@ -3,7 +3,7 @@
 #include "ofMain.h"
 #include "ofxOpenCv.h"
 #include "ofxKinect.h"
-#include "ofxCvHaarFinder.h"
+//#include "ofxCvHaarFinder.h"
 #include "ofx3DModelLoader.h"
 #include "ofxAssimpModelLoader.h"
 
@@ -51,7 +51,7 @@ class ofApp : public ofBaseApp {
 	ofxCvGrayscaleImage depthThreshFar; // the far thresholded image
 	
 	ofxCvContourFinder contourFinder;
-	ofxCvHaarFinder haarFinder;
+	//ofxCvHaarFinder haarFinder;
 	
 	bool bDrawColor;
 	bool bDrawDepth;
@@ -77,6 +77,7 @@ class ofApp : public ofBaseApp {
 
 	ofVec3f headPosition;
 	deque<ofPoint> headPositions;
+	deque<ofPoint> headHistory;
 
 	float windowWidth;
 	float windowHeight;

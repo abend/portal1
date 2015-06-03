@@ -34,12 +34,12 @@ void ofApp::setup() {
 	// kinect.setCameraTiltAngle(angle);
 
 	// start from the front
-	bDrawColor = true;
+	bDrawColor = false;
 	bDrawDepth = false;
 	bDrawContour = true;
 	bDrawHelp = true;
 
-	haarFinder.setup("haarcascade_frontalface_default.xml");
+	//haarFinder.setup("haarcascade_frontalface_default.xml");
 	//haarFinder.setup("haarcascade_mcs_nose.xml");
 	// haarFinder.setup("haarcascade_frontalface_alt.xml");
 
@@ -182,20 +182,30 @@ ofVec3f ofApp::calcHeadPosition() {
 		x /= headPositions.size();
 		z /= headPositions.size();
 
-		headX = x;
-		headY = y;
+		// headX = x;
+		// headY = y;
 
-		ofVec3f newHeadPosition = ofVec3f(x, y, z);
+		// ofVec3f newHeadPosition = ofVec3f(x, y, z);
 
-		// if (newHeadPosition.x != 0.0f &&
-		// 	newHeadPosition.y != 0.0f &&
-		// 	newHeadPosition.z != 0.0f)
-		// {
-		//headPosition = newHeadPosition;
-		// ofVec3f newHeadPosition = kinect.getWorldCoordinateAt(x, y);
-		// newHeadPosition.x *= -1.0f;
-		// newHeadPosition.y *= -1.0f;
+		headHistory.push_back(ofVec3f(x, y, z));
+		while (headHistory.size() > 10) {
+			headHistory.pop_front();
+		}
+
+		// smooth
+		// float x = 0.0f;
+		// float z = 0.0f;
+		// for (unsigned int i = 0; i < headPositions.size(); i++) {
+		// 	x += headPositions[i].x;
+		// 	z += headPositions[i].z;
 		// }
+
+		ofVec3f newHeadPosition = ofVec3f(0, 0, 0);
+
+		for (std::deque<ofVec3f>::iterator it = headHistory.begin(); it != headHistory.end(); ++it) {
+			newHeadPosition += *it;
+		}
+		newHeadPosition /= headHistory.size();
 
 		// TODO take camera tilt into account
 		//float ofxKinect::getCurrentCameraTiltAngle()
@@ -456,18 +466,18 @@ void ofApp::draw() {
 		ofPopStyle();
 	}
 
-	ofPushStyle();
-	ofSetColor(0, 255, 255);
-	ofNoFill();
-	for (unsigned int i = 0; i < haarFinder.blobs.size(); i++) {
-		ofRectangle cur = haarFinder.blobs[i].boundingRect;
-		ofRect(10 + cur.x / 2, 10 + cur.y / 2, cur.width / 2, cur.height / 2);
-	}
-	ofPopStyle();
+	// ofPushStyle();
+	// ofSetColor(0, 255, 255);
+	// ofNoFill();
+	// for (unsigned int i = 0; i < haarFinder.blobs.size(); i++) {
+	// 	ofRectangle cur = haarFinder.blobs[i].boundingRect;
+	// 	ofRect(10 + cur.x / 2, 10 + cur.y / 2, cur.width / 2, cur.height / 2);
+	// }
+	// ofPopStyle();
 
 	ofPushStyle();
 	ofSetColor(255, 255, 64);
-	ofCircle(headX / 2 + 10, headY / 2 + 10, 5);
+	// ofCircle(headX / 2 + 10, headY / 2 + 10, 5);
 	//ofRect(headX - 2, headY - 2, headX + 2, headY + 2);
 	ofPopStyle();
 
