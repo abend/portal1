@@ -34,6 +34,7 @@ void ofApp::setup() {
 	// kinect.setCameraTiltAngle(angle);
 
 	// start from the front
+	bDrawColor = true;
 	bDrawDepth = false;
 	bDrawContour = true;
 	bDrawHelp = true;
@@ -110,38 +111,56 @@ ofVec3f ofApp::calcHeadPosition() {
 	contourFinder.findContours(depthImage, 50, (kinect.width*kinect.height)/2, 1, false);
 
 	colorImage.setFromPixels(kinect.getPixelsRef());
-	grayImage = colorImage; // convert to grayscale
-	haarFinder.findHaarObjects(grayImage);
+	// grayImage = colorImage; // convert to grayscale
+	// haarFinder.findHaarObjects(grayImage);
 
-	if (haarFinder.blobs.size() > 0) {
-		//get the head position in camera pixel coordinates
-		const ofxCvBlob & blob = haarFinder.blobs.front();
-		float x = blob.centroid.x;
-		float y = blob.centroid.y;
-
-		ofVec3f newHeadPosition = kinect.getWorldCoordinateAt(x, y);
-		
-		// //do a really hacky interpretation of this, really you should be using something better to find the head (e.g. kinect skeleton tracking)
-		
-		// //since camera isn't mirrored, high x in camera means -ve x in world
-		// float worldHeadX = ofMap(cameraHeadX, 0, video.getWidth(), windowBottomRight.x, windowBottomLeft.x);
-		
-		// //low y in camera is +ve y in world
-		// float worldHeadY = ofMap(cameraHeadY, 0, video.getHeight(), windowTopLeft.y, windowBottomLeft.y);
-		
-		// //set position in a pretty arbitrary way
-		// headPosition = ofVec3f(worldHeadX, worldHeadY, viewerDistance);
-
-		return newHeadPosition;
-	}
 	/*
+	  if (haarFinder.blobs.size() > 0) {
+	  //get the head position in camera pixel coordinates
+	  const ofxCvBlob & blob = haarFinder.blobs.front();
+	  float x = blob.centroid.x;
+	  float y = blob.centroid.y;
+
+	  ofVec3f newHeadPosition = kinect.getWorldCoordinateAt(x, y);
+		
+	  // //do a really hacky interpretation of this, really you should be using something better to find the head (e.g. kinect skeleton tracking)
+		
+	  // //since camera isn't mirrored, high x in camera means -ve x in world
+	  // float worldHeadX = ofMap(cameraHeadX, 0, video.getWidth(), windowBottomRight.x, windowBottomLeft.x);
+		
+	  // //low y in camera is +ve y in world
+	  // float worldHeadY = ofMap(cameraHeadY, 0, video.getHeight(), windowTopLeft.y, windowBottomLeft.y);
+		
+	  // //set position in a pretty arbitrary way
+	  // headPosition = ofVec3f(worldHeadX, worldHeadY, viewerDistance);
+
+	  return newHeadPosition;
+	  }
+	*/
 	if (contourFinder.nBlobs > 0) {
 		ofxCvBlob blob = contourFinder.blobs.at(0);
 		ofPoint centroid = blob.centroid;
 		ofRectangle bbox = blob.boundingRect;
 
-		float y = centroid.y;//bbox.y + 50;  // arbitrary
-		float x = centroid.x;
+		float y = bbox.y + 50;  // arbitrary, but near the top
+		//float y = centroid.y;//bbox.y + 50;  // arbitrary
+		//float x = centroid.x;
+
+		headPositions.clear();
+
+		//cout << endl << endl;
+
+		for (int testx = bbox.x; testx < bbox.x + bbox.width; testx++) {
+			ofVec3f pos = kinect.getWorldCoordinateAt(testx, y);
+			if (pos.x != 0 && pos.y != 0 && pos.z != 0 &&
+				pos.z < 3000) 
+			{
+				//cout << pos << endl;
+				pos.x *= -1.0f;
+				pos.y *= -1.0f;
+				headPositions.push_back(pos);
+			}
+		}
 
 		// search around where we think the head is till we find something
 		// float perturb = 2.0f;
@@ -153,28 +172,38 @@ ofVec3f ofApp::calcHeadPosition() {
 
 		// float dist = kinect.getDistanceAt(x, y);
 
+		// find average of head positions for x,z
+		float x = 0.0f;
+		float z = 0.0f;
+		for (unsigned int i = 0; i < headPositions.size(); i++) {
+			x += headPositions[i].x;
+			z += headPositions[i].z;
+		}
+		x /= headPositions.size();
+		z /= headPositions.size();
+
 		headX = x;
 		headY = y;
 
-		ofVec3f newHeadPosition = kinect.getWorldCoordinateAt(x, y);
+		ofVec3f newHeadPosition = ofVec3f(x, y, z);
+
 		// if (newHeadPosition.x != 0.0f &&
 		// 	newHeadPosition.y != 0.0f &&
 		// 	newHeadPosition.z != 0.0f)
 		// {
 		//headPosition = newHeadPosition;
-		newHeadPosition.x *= -1.0f;
-		newHeadPosition.y *= -1.0f;
+		// ofVec3f newHeadPosition = kinect.getWorldCoordinateAt(x, y);
+		// newHeadPosition.x *= -1.0f;
+		// newHeadPosition.y *= -1.0f;
 		// }
 
-
-float ofxKinect::getCurrentCameraTiltAngle()
-
-
-float ofxKinect::getAccelPitch()
+		// TODO take camera tilt into account
+		//float ofxKinect::getCurrentCameraTiltAngle()
+		//float ofxKinect::getAccelPitch()
 
 		return newHeadPosition;
 	}
-	*/
+
 	return ofVec3f(0, 0, 500.0f);
 }
 
@@ -194,21 +223,21 @@ void drawBackground(float width, float height) {
 
 	// top
     ofPushMatrix();
-	ofTranslate(0, halfh, 0);
+	ofTranslate(0, halfh, -halfw);
 	ofRotateZ(90);
 	ofDrawGridPlane(halfw);
     ofPopMatrix();
 
 	// bottom
     ofPushMatrix();
-	ofTranslate(0, -halfh, 0);
+	ofTranslate(0, -halfh, -halfw);
 	ofRotateZ(90);
 	ofDrawGridPlane(halfw);
     ofPopMatrix();
 
 	// left
     ofPushMatrix();
-	ofTranslate(-halfw, 0, 0);
+	ofTranslate(-halfw, 0, -halfw);
 	ofDrawGridPlane(halfh);
     ofPopMatrix();
 
@@ -219,11 +248,11 @@ void drawBackground(float width, float height) {
     ofPopMatrix();
 
 	// back
-    ofPushMatrix();
-	ofTranslate(0, 0, -biggest);
-	ofRotateY(90);
-	ofDrawGridPlane(halfh);
-    ofPopMatrix();
+    // ofPushMatrix();
+	// ofTranslate(0, 0, -biggest);
+	// ofRotateY(90);
+	// ofDrawGridPlane(halfh);
+    // ofPopMatrix();
 
 	ofPopStyle();
 
@@ -346,6 +375,22 @@ void ofApp::drawCamera() {
 	window.draw();
 
 	ofPopStyle();
+
+	ofPushStyle();
+	//ofEnableSmoothing();
+	ofSetColor(255, 128, 255);
+	dots.clear();
+	dots.setMode(OF_PRIMITIVE_POINTS);
+	for (unsigned int i = 0; i < headPositions.size(); i++) {
+		dots.addVertex(headPositions[i]);
+	}
+	glPointSize(5);
+	dots.draw();
+
+	//ofSetLineWidth(3.0f);
+	// ofBeginShape();
+	// ofEndShape(false);
+	ofPopStyle();
 }
 
 void ofApp::draw() {
@@ -382,6 +427,11 @@ void ofApp::draw() {
 		ofPushStyle();
 		ofSetColor(255);
 		kinect.drawDepth(10, 10, kinect.width / 2, kinect.height / 2);
+		ofPopStyle();
+	} else if (bDrawColor) {
+		ofPushStyle();
+		ofSetColor(255);
+		kinect.draw(10, 10, kinect.width / 2, kinect.height / 2);
 		ofPopStyle();
 	}
 
@@ -426,26 +476,17 @@ void ofApp::draw() {
 		ofSetColor(255, 255, 255);
 		stringstream reportStream;
 
-		// if (kinect.hasAccelControl()) {
-		// 	reportStream << "accel is: " << ofToString(kinect.getMksAccel().x, 2) << " / "
-		// 				 << ofToString(kinect.getMksAccel().y, 2) << " / "
-		// 				 << ofToString(kinect.getMksAccel().z, 2) << endl;
-		// } else {
-		// 	reportStream << "Note: this is a newer Xbox Kinect or Kinect For Windows device," << endl
-		// 				 << "motor / led / accel controls are not currently supported" << endl << endl;
-		// }
-
 		reportStream << "head pos: " << headPosition << endl
 			// << "press p to switch between images and point cloud" << endl
 					 << "set near threshold " << nearThreshold << " (press: + -)" << endl
 					 << "set far threshold " << farThreshold << " (press: < >) num blobs found " << contourFinder.nBlobs
 					 << ", fps: " << ofGetFrameRate() << endl
-					 << "h: toggle help, c: toggle contour, d: toggle depth" << endl;
+					 << "h: toggle help, c: toggle color image, n: toggle contour, d: toggle depth" << endl;
 
-		// if (kinect.hasCamTiltControl()) {
-		// 	reportStream << "press UP and DOWN to change the tilt angle: " << angle << " degrees" << endl
-		// 				 << "press 1-5 & 0 to change the led mode" << endl;
-		// }
+		if (kinect.hasCamTiltControl()) {
+			reportStream << "press UP and DOWN to change the tilt angle: " << angle << " degrees" << endl
+						 << "press 1-5 & 0 to change the led mode" << endl;
+		}
 
 		ofDrawBitmapString(reportStream.str(), 20, 700);
 	}
@@ -473,11 +514,15 @@ void ofApp::keyPressed (int key) {
 		bDrawHelp = !bDrawHelp;
 		break;
 
+	case 'c':
+		bDrawColor = !bDrawColor;
+		break;
+
 	case 'd':
 		bDrawDepth = !bDrawDepth;
 		break;
 
-	case 'c':
+	case 'n':
 		bDrawContour = !bDrawContour;
 		break;
 

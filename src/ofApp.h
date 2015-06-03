@@ -53,6 +53,7 @@ class ofApp : public ofBaseApp {
 	ofxCvContourFinder contourFinder;
 	ofxCvHaarFinder haarFinder;
 	
+	bool bDrawColor;
 	bool bDrawDepth;
 	bool bDrawContour;
 	bool bDrawHelp;
@@ -66,6 +67,7 @@ class ofApp : public ofBaseApp {
 	ofEasyCam previewCamera;
 	bool usePreview;
 	ofVboMesh window;
+	ofVboMesh dots;
 
 
 	//the view window is defined by 3 corners
@@ -74,6 +76,7 @@ class ofApp : public ofBaseApp {
 	ofVec3f windowBottomRight;
 
 	ofVec3f headPosition;
+	deque<ofPoint> headPositions;
 
 	float windowWidth;
 	float windowHeight;
